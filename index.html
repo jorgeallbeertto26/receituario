@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Portal de Receituário Médico (protótipo)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.45 system-ui,Arial,sans-serif;background:#f3f6fb;color:#0c1f3f}
+.warn{background:#8b1a1a;color:#fff;padding:8px 16px;font-size:13px;text-align:center}
+.top{background:#0c1f3f;color:#fff;display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:10px 16px}
+.top b{margin-right:auto;font-size:17px}
+.top button{background:transparent;border:0;color:#cfd8ea;padding:8px 12px;border-radius:6px;cursor:pointer;font:inherit}
+.top button.on{background:#1d3a6b;color:#fff}
+main{max-width:1300px;margin:0 auto;padding:14px}
+.tab{display:none}.tab.on{display:block}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+button.b,a.b{background:#0c1f3f;color:#fff;border:0;border-radius:6px;padding:9px 14px;cursor:pointer;font:600 14px system-ui;text-decoration:none}
+button.b.g{background:#2e7d5b}button.b.l{background:#e3ecf8;color:#0c1f3f}button.b.r{background:#fff;color:#8b1a1a;border:1px solid #8b1a1a}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+.pane{background:#fff;border:1px solid #dbe3ef;border-radius:8px;padding:14px}
+.mob{display:none}
+@media(max-width:900px){.split{grid-template-columns:1fr}.mob{display:flex}.split.ve .pe,.split.vp .pp{display:none}}
+fieldset{border:0;padding:0;margin:0;min-width:0}
+h3{margin:14px 0 8px;font-size:15px;color:#1d3a6b}
+label{display:block;font-size:12px;color:#51607a;margin-bottom:2px}
+input,select,textarea{width:100%;font:inherit;border:1px solid #c5d1e3;border-radius:6px;padding:7px 9px;background:#fff;color:#0c1f3f}
+textarea{min-height:56px;resize:vertical}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.item{border:1px solid #dbe3ef;border-left:4px solid #1d3a6b;border-radius:8px;padding:10px;margin-bottom:10px;background:#fafcff}
+.item .h{display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.item .h b{margin-right:auto}
+.item .h button{border:1px solid #c5d1e3;background:#fff;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:12px}
+#sheet{background:#fff;width:100%;max-width:794px;margin:0 auto;padding:0;border:1px solid #c5d1e3;box-shadow:0 2px 10px #0c1f3f22;font-family:Arial,sans-serif;font-size:11pt;color:#000;overflow-wrap:anywhere}
+.dt{width:100%;height:1123px;border-collapse:collapse}.dt td{padding:0}.dt thead td{padding:0 48px}.dt .bd{height:100%;vertical-align:top;padding:0 48px}
+.badge{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:600;background:#e3ecf8}
+.badge.e{background:#d9f0e5;color:#1f6a48}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:8px;border-bottom:1px solid #dbe3ef;text-align:left}th{background:#e3ecf8}
+.tw{overflow-x:auto}
+#msg{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:#0c1f3f;color:#fff;padding:10px 18px;border-radius:8px;display:none;max-width:90%;z-index:9}
+.note{font-size:13px;color:#51607a}
+@media print{
+ .noprint,.top,.warn,.bar,.pe,.mob,#msg,.acts{display:none!important}
+ body{background:#fff}main{padding:0;max-width:none}.tab{display:none!important}#t-edit{display:block!important}
+ .split{display:block}.pane{border:0;padding:0}
+ #sheet{border:0;box-shadow:none;max-width:none;padding:0}.dt{height:297mm!important}
+ *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ @page{size:A4;margin:0}
+}
+</style>
+</head>
+<body>
+<div class="warn">PROTÓTIPO: use somente DADOS FICTÍCIOS. Não é adequado para prontuários ou receitas reais. Sem assinatura digital.</div>
+<div class="top noprint"><b>Portal de Receituário Médico</b>
+ <button data-t="edit" class="on">Nova receita</button><button data-t="hist">Histórico</button><button data-t="mod">Modelos</button><button data-t="cfg">Configurações</button></div>
+<main>
+<section id="t-edit" class="tab on">
+ <div class="bar">
+  <select id="tsel" style="width:auto;max-width:220px"><option value="">Iniciar a partir de um modelo…</option></select>
+  <button class="b l" id="bNew">Nova receita</button>
+  <button class="b" id="bSave">Salvar rascunho</button>
+  <button class="b g" id="bEmit">Emitir</button>
+  <button class="b g" id="bSend" style="display:none">Emitir e enviar</button>
+  <button class="b l" id="bVer" style="display:none">Criar nova versão</button>
+  <button class="b l" id="bTest">Preencher dados fictícios</button>
+  <span id="st" class="badge">Rascunho</span> <span id="rid" class="note"></span>
+ </div>
+ <div class="bar mob"><button class="b l" data-v="ve">Editar</button><button class="b l" data-v="vp">Visualizar</button></div>
+ <div class="split ve" id="split">
+  <div class="pane pe"><fieldset id="fs">
+   <h3 style="margin-top:0">Paciente</h3>
+   <div class="g2">
+    <div style="grid-column:1/-1"><label>Nome completo</label><input data-p="nome"></div>
+    <div><label>Data de nascimento</label><input type="date" data-p="nasc"></div>
+    <div><label>CPF (se necessário)</label><input data-p="cpf" inputmode="numeric"></div>
+    <div style="grid-column:1/-1"><label>Endereço (se exigido)</label><input data-p="end"></div>
+    <div><label>Data de emissão</label><input type="date" id="fdata"></div>
+   </div>
+   <div id="emailBox" style="display:none"><h3>Envio por e-mail</h3><div class="g2">
+    <div><label>E-mail do paciente</label><input type="email" data-p="email" autocomplete="off"></div>
+    <div><label>Repita o e-mail do paciente</label><input type="email" data-p="email2" autocomplete="off"></div></div>
+    <label style="display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-size:13px"><input type="checkbox" id="conf" style="width:auto;margin-top:3px"> Confirmo que revisei a receita e que o e-mail do paciente está correto. A cópia irá somente para este endereço.</label></div>
+   <h3>Medicamentos</h3><div id="items"></div>
+   <button class="b l" id="bAdd" type="button">+ Adicionar medicamento</button>
+   <h3>Orientações complementares ao paciente</h3>
+   <textarea id="orient" placeholder="Orientações gerais definidas pelo médico"></textarea>
+  </fieldset></div>
+  <div class="pane pp">
+   <div class="acts bar">
+    <button class="b" id="bCopy">Copiar receita formatada</button>
+    <button class="b" id="bDocx">Baixar Word (.docx)</button>
+    <button class="b" id="bPrint">Imprimir / salvar PDF</button>
+    <button class="b l" id="bTpl">Salvar como modelo</button>
+   </div>
+   <div id="sheet"></div>
+  </div>
+ </div>
+</section>
+
+<section id="t-hist" class="tab">
+ <div class="pane">
+  <div class="g2" style="margin-bottom:10px">
+   <div><label>ID ou nome do paciente</label><input id="fq"></div>
+   <div><label>De</label><input type="date" id="fde"></div>
+   <div><label>Até</label><input type="date" id="fate"></div>
+   <div><label>Status</label><select id="fst"><option value="">Todos</option><option>Rascunho</option><option>Emitida</option></select></div>
+  </div>
+  <div class="bar"><button class="b" id="bBusca">Pesquisar</button><button class="b l" id="bLimpa">Limpar filtros</button><span class="note" id="hinfo"></span></div>
+  <div class="tw"><table><thead><tr><th>ID</th><th>Paciente</th><th>Data</th><th>Médico</th><th>Status</th><th>Versão</th><th>Ações</th></tr></thead><tbody id="hb"></tbody></table></div>
+ </div>
+</section>
+
+<section id="t-mod" class="tab"><div class="pane"><h3 style="margin-top:0">Modelos de receita</h3>
+ <p class="note">Modelos são rascunhos reutilizáveis guardados neste navegador (sem dados de paciente). Alterar um modelo nunca modifica receitas já salvas. Para criar um, monte os medicamentos na aba Nova receita e use “Salvar como modelo”.</p>
+ <div class="tw"><table><thead><tr><th>Nome</th><th>Categoria</th><th>Itens</th><th>Ações</th></tr></thead><tbody id="mb"></tbody></table></div></div></section>
+
+<section id="t-cfg" class="tab"><div class="pane">
+ <h3 style="margin-top:0">Consultório e médico</h3>
+ <div class="g2" id="cm"></div>
+ <h3>Armazenamento</h3>
+ <div class="g2">
+  <div><label>Onde salvar as receitas</label><select id="cmodo"><option value="local">Neste navegador (somente testes)</option><option value="sheets">Google Sheets (Apps Script)</option><option value="email">E-mail: repositório + cópia ao paciente (Apps Script)</option></select></div>
+  <div style="grid-column:1/-1"><label>URL do Apps Script (termina em /exec)</label><input id="curl" placeholder="https://script.google.com/macros/s/…/exec"></div>
+  <div style="grid-column:1/-1"><label>Token de acesso (fica só nesta sessão do navegador)</label><input id="ctok" type="password" autocomplete="off"></div>
+ </div>
+ <p class="note">No modo E-mail, o botão “Emitir e enviar” manda a receita (PDF e Word) à caixa de receitas e o PDF ao paciente; nada é gravado neste navegador. A planilha é uma opção gratuita para DEMONSTRAÇÃO com dados fictícios. Ela não oferece MFA próprio por receita, criptografia sob seu controle, auditoria detalhada nem backups testados: não use para pacientes reais.</p>
+ <div class="bar"><button class="b" id="bCfg">Salvar configurações</button><button class="b l" id="bConn">Testar conexão</button><button class="b r" id="bWipe">Apagar dados locais</button></div>
+</div></section>
+</main>
+<div id="msg" role="status"></div>
+
+<script>
+//<pure
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function renderHtml(B){var h="",g=null;B.forEach(function(b){
+ if(g!==null&&b.g!==g){h+="</div>";g=null}
+ if(b.g!==undefined&&g===null){h+='<div style="break-inside:avoid;page-break-inside:avoid">';g=b.g}
+ if(b.k=="hr")h+='<hr style="border:0;border-top:2px solid #0c1f3f;margin:8px 0 12px">';
+ else if(b.k=="sp")h+='<div style="height:'+b.h+'px"></div>';
+ else h+='<p style="margin:'+(b.mt?14:0)+'px 0 4px '+(b.ind?18:0)+'px;text-align:'+(b.al=="c"?"center":"left")+';font-size:'+(b.sz||11)+'pt;font-weight:'+(b.b?700:400)+'">'+esc(b.t)+'</p>'});
+ if(g!==null)h+="</div>";return h}
+function blocksText(B){return B.map(function(b){return b.k=="hr"||b.k=="sp"?"":(b.ind?"   ":"")+b.t}).join("\n")}
+function blocksDocx(B){var p=B.map(function(b){
+ if(b.k=="sp")return '<w:p><w:pPr><w:spacing w:before="'+b.h*15+'" w:after="0"/></w:pPr></w:p>';
+ if(b.k=="hr")return '<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="12" w:space="1" w:color="0C1F3F"/></w:pBdr><w:spacing w:after="160"/></w:pPr></w:p>';
+ return '<w:p><w:pPr>'+(b.kn?'<w:keepNext/>':'')+'<w:spacing w:before="'+(b.mt?240:0)+'" w:after="80"/>'+(b.ind?'<w:ind w:left="360"/>':'')+'<w:jc w:val="'+(b.al=="c"?"center":"left")+'"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>'+(b.b?'<w:b/>':'')+'<w:sz w:val="'+Math.round((b.sz||11)*2)+'"/></w:rPr><w:t xml:space="preserve">'+esc(b.t)+'</w:t></w:r></w:p>'}).join("");
+ return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>'+p+'<w:sectPr><w:headerReference w:type="default" r:id="rId1"/><w:footerReference w:type="default" r:id="rId2"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1701" w:right="1134" w:bottom="1418" w:left="1134" w:header="454" w:footer="0" w:gutter="0"/></w:sectPr></w:body></w:document>'}
+function docxHdr(m){function r(t,sz,sp){return '<w:p><w:pPr><w:spacing w:before="0" w:after="'+(sp||0)+'"/><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:b/><w:color w:val="333333"/><w:sz w:val="'+sz+'"/></w:rPr><w:t xml:space="preserve">'+esc(t)+'</w:t></w:r></w:p>'}
+ return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'+r((m.nome||"").toUpperCase(),42,0)+r((m.esp||"").toUpperCase(),19,120)+'</w:hdr>'}
+function docxFtr(m){function r(t,first,last){return '<w:p><w:pPr>'+(first?'<w:pBdr><w:top w:val="single" w:sz="24" w:space="0" w:color="1F2A44"/></w:pBdr>':'')+'<w:shd w:val="clear" w:color="auto" w:fill="2B3A5C"/><w:spacing w:before="'+(first?160:0)+'" w:after="'+(last?160:0)+'"/><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">'+esc(t)+'</w:t></w:r></w:p>'}
+ return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'+r(m.insta||"",1,0)+r(m.unidades||"",0,1)+'</w:ftr>'}
+//</pure>
+var $=function(i){return document.getElementById(i)};
+var LS={g:function(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},s:function(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}};
+var DEFM={nome:"Dr. Vinícius Assis",esp:"Endocrinologia",crm:"5278769-8",uf:"",rqe:"",insta:"@drviniciusassis",unidades:"Nova Iguaçu - 21 99940-0205  /  Ipanema - 21 97511-9903"};
+var MLAB={nome:"Nome no cabeçalho",esp:"Especialidade (cabeçalho)",crm:"CRM (número)",uf:"UF do CRM",rqe:"RQE (se aplicável)",insta:"Instagram (rodapé)",unidades:"Unidades e telefones (rodapé)"};
+var cfg=Object.assign({modo:"local",url:""},LS.g("cfg",{}));cfg.m=Object.assign({},DEFM,cfg.m);
+var F=[["nome","Medicamento / princípio ativo"],["comercial","Nome comercial"],["conc","Concentração"],["forma","Forma farmacêutica"],["apres","Apresentação"],["dose","Dose"],["via","Via de administração"],["freq","Frequência"],["dur","Duração"],["qtd","Quantidade a dispensar"],["instr","Instruções específicas"],["obs","Observações"]];
+function newItem(){var o={};F.forEach(function(f){o[f[0]]=""});return o}
+function today(){var d=new Date();return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)}
+function fmt(iso){return iso?iso.split("-").reverse().join("/"):""}
+function blank(){return{id:null,versao:1,status:"Rascunho",criadoEm:null,atualizadoEm:null,origem:null,medico:"",paciente:{nome:"",nasc:"",cpf:"",end:"",email:"",email2:""},data:today(),itens:[newItem()],orient:""}}
+var cur=blank();
+function msg(t){var m=$("msg");m.textContent=t;m.style.display="block";clearTimeout(msg.t);msg.t=setTimeout(function(){m.style.display="none"},3500)}
+function genId(){var a="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint8Array(6),s="";crypto.getRandomValues(r);for(var i=0;i<6;i++)s+=a[r[i]%a.length];return "REC-"+today().replace(/-/g,"")+"-"+s}
+function crmLine(){var m=cfg.m;return m.crm?"CRM"+(m.uf?"-"+m.uf:"")+" "+m.crm+(m.rqe?" · RQE "+m.rqe:""):""}
+function lines(it){var any=F.some(function(f){return it[f[0]].trim()});if(!any)return[];
+ var L=[],t=[it.nome,it.conc].filter(function(x){return x.trim()}).join(" ")||"(sem nome)";if(it.comercial.trim())t+=" ("+it.comercial.trim()+")";L.push(t);
+ var a=[it.forma,it.apres].filter(function(x){return x.trim()}).join(", ");if(a)L.push("Apresentação: "+a);
+ var u=[["Dose",it.dose],["Via",it.via],["Frequência",it.freq],["Duração",it.dur]].filter(function(x){return x[1].trim()}).map(function(x){return x[0]+": "+x[1].trim()}).join(" · ");if(u)L.push(u);
+ if(it.qtd.trim())L.push("Quantidade: "+it.qtd.trim());if(it.instr.trim())L.push("Instruções: "+it.instr.trim());if(it.obs.trim())L.push("Obs.: "+it.obs.trim());return L}
+function blocks(){var m=cfg.m,p=cur.paciente,B=[];
+ function P(t,o){if(t&&String(t).trim())B.push(Object.assign({k:"p",t:String(t).trim()},o||{}))}
+ B.push({k:"sp",h:8});P("RECEITUÁRIO",{b:1,al:"c",sz:16});B.push({k:"sp",h:6});
+ P(p.nome&&"Paciente: "+p.nome,{b:1});P(p.nasc&&"Data de nascimento: "+fmt(p.nasc));P(p.cpf&&"CPF: "+p.cpf);P(p.end&&"Endereço: "+p.end);B.push({k:"sp",h:10});
+ var n=0;cur.itens.forEach(function(it){var L=lines(it);if(!L.length)return;n++;L.forEach(function(l,j){B.push({k:"p",t:(j==0?n+". ":"")+l,b:j==0,ind:j>0,kn:j<L.length-1,g:n,mt:j==0&&n>1})})});
+ if(cur.orient.trim()){P("Orientações ao paciente:",{b:1,mt:1,kn:1});cur.orient.split("\n").forEach(function(l){P(l)})}
+ P(cur.data&&"Data de emissão: "+fmt(cur.data),{mt:1});B.push({k:"sp",h:40});
+ P("______________________________",{al:"c"});P(m.nome,{al:"c",b:1});P(crmLine(),{al:"c",sz:9});
+ P(cur.id&&"Ref.: "+cur.id+" · versão "+cur.versao,{al:"c",sz:8,mt:1});return B}
+function artHeader(){var m=cfg.m;return '<div style="text-align:center;padding:34px 0 14px"><div style="font:700 21pt Montserrat,Arial,sans-serif;letter-spacing:.02em;color:#333">'+esc((m.nome||"").toUpperCase())+'</div><div style="font:700 9.5pt Montserrat,Arial,sans-serif;color:#333;margin-top:3px">'+esc((m.esp||"").toUpperCase())+'</div></div>'}
+var IG='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="vertical-align:-3px;margin-right:6px"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1" fill="#fff" stroke="none"/></svg>';
+var VA='<svg width="58" height="48" viewBox="0 0 60 48" fill="none" stroke="#fff" stroke-width="1.3" style="position:absolute;right:26px;top:50%;margin-top:-24px"><path d="M3 4 L21 44 L43 3"/><path d="M33 22 L43 3 L57 28 Z"/></svg>';
+function artFooter(){var m=cfg.m;return '<div style="border-top:4px solid #1f2a44"></div><div style="height:3px"></div><div style="border-top:1.5px solid #c9ced8"></div><div style="background:#2b3a5c;color:#fff;text-align:center;padding:16px 90px;position:relative;font:600 10pt Montserrat,Arial,sans-serif;line-height:1.7">'+VA+'<div>'+IG+esc(m.insta)+'</div><div>'+esc(m.unidades)+'</div></div>'}
+function sheetHtml(){return '<table class="dt"><thead><tr><td>'+artHeader()+'</td></tr></thead><tbody><tr><td class="bd">'+renderHtml(blocks())+'</td></tr></tbody><tfoot><tr><td>'+artFooter()+'</td></tr></tfoot></table>'}
+function copyHtml(B){var m=cfg.m;return '<div style="font-family:Arial,sans-serif;font-size:11pt"><p style="text-align:center;margin:0;font-size:21pt;font-weight:700;color:#333">'+esc((m.nome||"").toUpperCase())+'</p><p style="text-align:center;margin:0 0 14px;font-size:9.5pt;font-weight:700;color:#333">'+esc((m.esp||"").toUpperCase())+'</p>'+renderHtml(B)+'<table width="100%" style="margin-top:24px;border-collapse:collapse"><tr><td align="center" bgcolor="#2b3a5c" style="background:#2b3a5c;color:#ffffff;padding:12px;font-size:10pt;font-weight:600">'+esc(m.insta)+'<br>'+esc(m.unidades)+'</td></tr></table></div>'}
+function upd(){$("sheet").innerHTML=sheetHtml();var e=cur.status=="Emitida";$("st").textContent=cur.status+" · v"+cur.versao;$("st").className="badge"+(e?" e":"");$("rid").textContent=cur.id?cur.id:"(ID gerado ao salvar)";
+ var em=cfg.modo=="email";$("fs").disabled=e;$("bEmit").style.display=(e||em)?"none":"";$("bSave").style.display=(e||em)?"none":"";$("bSend").style.display=(em&&!e)?"":"none";$("emailBox").style.display=em?"":"none";$("bVer").style.display=e?"":"none"}
+function buildEd(){var h="";cur.itens.forEach(function(it,i){h+='<div class="item"><div class="h"><b>Medicamento '+(i+1)+'</b><button data-a="up" data-i="'+i+'">↑</button><button data-a="dn" data-i="'+i+'">↓</button><button data-a="dup" data-i="'+i+'">Duplicar</button><button data-a="clr" data-i="'+i+'">Limpar</button><button data-a="rm" data-i="'+i+'">Remover</button></div><div class="g2">';
+ F.forEach(function(f){var big=f[0]=="instr"||f[0]=="obs"||f[0]=="nome";h+='<div'+(big?' style="grid-column:1/-1"':'')+'><label>'+f[1]+'</label><input data-k="'+f[0]+'" data-i="'+i+'" value="'+esc(it[f[0]])+'"></div>'});h+='</div></div>'});
+ $("items").innerHTML=h;
+ document.querySelectorAll("[data-p]").forEach(function(e){e.value=cur.paciente[e.dataset.p]||""});$("fdata").value=cur.data;$("orient").value=cur.orient;$("conf").checked=false;upd()}
+$("items").addEventListener("input",function(e){var t=e.target;if(t.dataset.k){cur.itens[+t.dataset.i][t.dataset.k]=t.value;upd()}});
+$("items").addEventListener("click",function(e){var a=e.target.dataset.a;if(!a)return;var i=+e.target.dataset.i,A=cur.itens;
+ if(a=="rm"){if(A.length>1)A.splice(i,1);else A[0]=newItem()}else if(a=="clr")A[i]=newItem();else if(a=="dup")A.splice(i+1,0,Object.assign({},A[i]));
+ else if(a=="up"&&i>0){var t=A[i];A[i]=A[i-1];A[i-1]=t}else if(a=="dn"&&i<A.length-1){var t2=A[i];A[i]=A[i+1];A[i+1]=t2}buildEd()});
+document.querySelectorAll("[data-p]").forEach(function(e){e.addEventListener("input",function(){cur.paciente[e.dataset.p]=e.value;upd()})});
+$("fdata").addEventListener("input",function(){cur.data=this.value;upd()});$("orient").addEventListener("input",function(){cur.orient=this.value;upd()});
+$("bAdd").onclick=function(){cur.itens.push(newItem());buildEd()};
+$("bNew").onclick=function(){if(confirm("Iniciar uma receita em branco? Alterações não salvas serão perdidas.")){cur=blank();buildEd()}};
+$("bTest").onclick=function(){cur.paciente={nome:"Paciente de Teste",nasc:"1980-01-01",cpf:"",end:"",email:"",email2:""};cur.itens=[Object.assign(newItem(),{nome:"Medicamento de teste",conc:"0 mg",forma:"comprimido",dose:"1 comprimido",via:"oral",freq:"2 vezes ao dia",dur:"7 dias",qtd:"1 caixa",instr:"TEXTO FICTÍCIO"})];cur.orient="Orientação fictícia para teste do layout.";buildEd()};
+document.querySelectorAll(".top [data-t]").forEach(function(b){b.onclick=function(){go(b.dataset.t)}});
+function go(t){document.querySelectorAll(".top [data-t]").forEach(function(x){x.classList.toggle("on",x.dataset.t==t)});document.querySelectorAll(".tab").forEach(function(s){s.classList.toggle("on",s.id=="t-"+t)});if(t=="hist")busca();if(t=="mod")renderMod()}
+document.querySelectorAll("[data-v]").forEach(function(b){b.onclick=function(){$("split").className="split "+b.dataset.v}});
+function valid(){if(!cur.paciente.nome.trim()){msg("Informe o nome do paciente.");return false}if(!cur.itens.some(function(i){return i.nome.trim()})){msg("Informe ao menos um medicamento.");return false}return true}
+/* armazenamento */
+function tok(){return sessionStorage.getItem("tok")||""}
+function sheetsOn(){return cfg.modo=="sheets"}
+function list(){if(cfg.modo=="email")return Promise.reject(new Error("No modo e-mail o histórico fica na caixa de receitas: pesquise pelo ID."));if(!sheetsOn())return Promise.resolve(LS.g("recs",[]));if(!cfg.url||!tok())return Promise.reject(new Error("Configure URL e token."));
+ return fetch(cfg.url+"?token="+encodeURIComponent(tok())).then(function(r){return r.json()}).then(function(j){if(!j.ok)throw new Error(j.erro||"Falha");return j.rows.map(function(r){return JSON.parse(r[6])})})}
+function put(r){if(!sheetsOn()){var a=LS.g("recs",[]),k=a.findIndex(function(x){return x.id==r.id&&x.versao==r.versao});if(k>=0)a[k]=r;else a.push(r);return LS.s("recs",a)?Promise.resolve():Promise.reject(new Error("Armazenamento cheio."))}
+ if(!cfg.url||!tok())return Promise.reject(new Error("Configure URL e token."));
+ return fetch(cfg.url,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({token:tok(),rec:r})}).then(function(){})}
+function latest(a){var m={};a.forEach(function(r){var o=m[r.id];if(!o||r.versao>o.versao||(r.versao==o.versao&&r.atualizadoEm>o.atualizadoEm))m[r.id]=r});return Object.keys(m).map(function(k){return m[k]})}
+function save(status){if(!valid())return Promise.resolve(false);var now=new Date().toISOString();if(!cur.id)cur.id=genId();cur.criadoEm=cur.criadoEm||now;cur.atualizadoEm=now;cur.medico=cfg.m.nome;if(status)cur.status=status;
+ return put(JSON.parse(JSON.stringify(cur))).then(function(){upd();msg(status=="Emitida"?"Receita emitida e salva: "+cur.id:"Rascunho salvo: "+cur.id);return true},function(e){msg("Erro ao salvar: "+e.message);return false})}
+$("bSave").onclick=function(){save()};
+$("bEmit").onclick=function(){if(confirm("Confirma que revisou paciente, medicamentos, posologia e quantidades? Após emitir, alterações geram nova versão."))save("Emitida")};
+$("bVer").onclick=function(){cur.versao++;cur.status="Rascunho";upd();msg("Nova versão criada (v"+cur.versao+"). Edite e salve.")};
+/* histórico */
+function busca(){list().then(function(a){a=latest(a);var q=$("fq").value.trim().toLowerCase(),de=$("fde").value,ate=$("fate").value,st=$("fst").value;
+ a=a.filter(function(r){var d=(r.criadoEm||"").slice(0,10);return(!q||r.id.toLowerCase().indexOf(q)>=0||r.paciente.nome.toLowerCase().indexOf(q)>=0)&&(!de||d>=de)&&(!ate||d<=ate)&&(!st||r.status==st)}).sort(function(x,y){return y.criadoEm>x.criadoEm?1:-1});
+ $("hinfo").textContent=a.length+" receita(s)";window._h=a;
+ $("hb").innerHTML=a.map(function(r,i){return "<tr><td>"+esc(r.id)+"</td><td>"+esc(r.paciente.nome)+"</td><td>"+fmt((r.criadoEm||"").slice(0,10))+"</td><td>"+esc(r.medico)+"</td><td>"+esc(r.status)+"</td><td>v"+r.versao+'</td><td><button class="b l" data-o="'+i+'">Abrir</button> <button class="b l" data-c="'+i+'">Nova baseada nesta</button></td></tr>'}).join("")||'<tr><td colspan="7">Nenhuma receita encontrada.</td></tr>'},function(e){msg("Erro: "+e.message);$("hb").innerHTML='<tr><td colspan="7">'+esc(e.message)+"</td></tr>"})}
+$("hb").addEventListener("click",function(e){var d=e.target.dataset,r;if(d.o!==undefined){cur=JSON.parse(JSON.stringify(window._h[+d.o]));buildEd();go("edit")}
+ else if(d.c!==undefined){r=JSON.parse(JSON.stringify(window._h[+d.c]));var o=r.id;r.id=null;r.versao=1;r.status="Rascunho";r.criadoEm=null;r.atualizadoEm=null;r.origem=o;r.data=today();cur=r;buildEd();go("edit");msg("Novo rascunho baseado em "+o+". Revise antes de emitir.")}});
+$("bBusca").onclick=busca;$("bLimpa").onclick=function(){["fq","fde","fate","fst"].forEach(function(i){$(i).value=""});busca()};
+/* modelos */
+function tm(){return LS.g("tmpls",[])}
+function renderMod(){var a=tm();$("mb").innerHTML=a.map(function(t,i){return "<tr><td>"+esc(t.nome)+"</td><td>"+esc(t.cat)+"</td><td>"+t.itens.length+'</td><td><button class="b l" data-u="'+i+'">Usar</button> <button class="b l" data-d="'+i+'">Duplicar</button> <button class="b r" data-x="'+i+'">Excluir</button></td></tr>'}).join("")||'<tr><td colspan="4">Nenhum modelo salvo.</td></tr>';
+ $("tsel").innerHTML='<option value="">Iniciar a partir de um modelo…</option>'+a.map(function(t,i){return '<option value="'+i+'">'+esc(t.nome)+"</option>"}).join("")}
+function useT(i){var t=tm()[i];if(!t)return;cur.itens=JSON.parse(JSON.stringify(t.itens));cur.orient=t.orient||"";buildEd();msg("Modelo aplicado como rascunho. Revise todos os campos.")}
+$("tsel").onchange=function(){if(this.value!==""){if(cur.itens.some(function(i){return i.nome.trim()})&&!confirm("Substituir os medicamentos atuais pelo modelo?")){this.value="";return}useT(+this.value);this.value=""}};
+$("bTpl").onclick=function(){var n=prompt("Nome do modelo:");if(!n)return;var c=prompt("Categoria (opcional):")||"";var a=tm();a.push({nome:n,cat:c,itens:JSON.parse(JSON.stringify(cur.itens)),orient:cur.orient});LS.s("tmpls",a);renderMod();msg("Modelo salvo.")};
+$("mb").addEventListener("click",function(e){var d=e.target.dataset,a=tm();if(d.u!==undefined){useT(+d.u);go("edit")}else if(d.d!==undefined){var c=JSON.parse(JSON.stringify(a[+d.d]));c.nome+=" (cópia)";a.push(c);LS.s("tmpls",a);renderMod()}else if(d.x!==undefined&&confirm("Excluir este modelo?")){a.splice(+d.x,1);LS.s("tmpls",a);renderMod()}});
+/* exportar */
+function fname(){var n=(cur.paciente.nome||"paciente").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-Za-z0-9]+/g,"_").replace(/^_|_$/g,"");return "Receita_"+n+"_"+cur.data}
+$("bCopy").onclick=function(){if(!valid())return;var B=blocks(),h=copyHtml(B),t=(cfg.m.nome+"\n"+cfg.m.esp+"\n\n"+blocksText(B)+"\n\n"+cfg.m.insta+"\n"+cfg.m.unidades);
+ function fb(){var r=document.createRange();r.selectNodeContents($("sheet"));var s=getSelection();s.removeAllRanges();s.addRange(r);try{document.execCommand("copy");msg("Receita copiada (use Ctrl+V no Word).")}catch(e){msg("O navegador bloqueou a cópia. Selecione o texto manualmente.")}s.removeAllRanges()}
+ if(navigator.clipboard&&window.ClipboardItem){navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([h],{type:"text/html"}),"text/plain":new Blob([t],{type:"text/plain"})})]).then(function(){msg("Receita copiada (use Ctrl+V no Word).")},fb)}else fb()};
+function makeDocx(type){ var z=new JSZip();z.file("[Content_Types].xml",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>');
+ z.file("_rels/.rels",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+ z.file("word/document.xml",blocksDocx(blocks()));z.file("word/header1.xml",docxHdr(cfg.m));z.file("word/footer1.xml",docxFtr(cfg.m));
+ z.file("word/_rels/document.xml.rels",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>');
+ return z.generateAsync({type:type,mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"})}
+$("bDocx").onclick=function(){if(!valid())return;if(!window.JSZip){msg("Biblioteca JSZip não carregou (verifique a internet).");return}
+ makeDocx("blob").then(function(b){var a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=fname()+".docx";document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},1500);msg("Word gerado.")})};
+$("bSend").onclick=function(){if(!valid())return;var p=cur.paciente,em=(p.email||"").trim().toLowerCase();
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){msg("E-mail do paciente inválido.");return}
+ if(em!==(p.email2||"").trim().toLowerCase()){msg("Os dois e-mails do paciente não conferem.");return}
+ if(!$("conf").checked){msg("Marque a confirmação antes de enviar.");return}
+ if(!cfg.url||!tok()){msg("Configure URL e token em Configurações.");return}
+ if(!window.JSZip){msg("Biblioteca JSZip não carregou (verifique a internet).");return}
+ if(!confirm("Emitir e enviar a receita para a caixa de receitas e para "+em+"?"))return;
+ if(!cur.id)cur.id=genId();var btn=$("bSend");btn.disabled=true;btn.textContent="Enviando…";
+ makeDocx("base64").then(function(d){var m=cfg.m;return fetch(cfg.url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({token:tok(),acao:"enviar",
+  rec:{id:cur.id,versao:cur.versao,data:cur.data,nome:p.nome.trim(),nasc:p.nasc,email:em},doc:{head:{nome:m.nome,esp:m.esp},foot:{insta:m.insta,unidades:m.unidades},blocks:blocks()},docx:d,arquivo:fname()})}).then(function(r){return r.json()})})
+ .then(function(j){if(!j.ok)throw new Error(j.erro||"falha no envio");cur.status="Emitida";cur.atualizadoEm=new Date().toISOString();upd();msg(j.paciente?"Receita enviada à caixa de receitas e ao paciente.":"Enviada à caixa de receitas, mas FALHOU o envio ao paciente. Reenvie manualmente.")})
+ .catch(function(e){msg("Não foi possível confirmar o envio ("+e.message+"). Verifique a caixa de receitas antes de tentar de novo.")})
+ .then(function(){btn.disabled=false;btn.textContent="Emitir e enviar"})};
+$("bPrint").onclick=function(){if(valid())window.print()};
+/* configurações */
+$("cm").innerHTML=Object.keys(MLAB).map(function(k){return '<div'+(k=="unidades"?' style="grid-column:1/-1"':'')+'><label>'+MLAB[k]+'</label><input data-m="'+k+'" value="'+esc(cfg.m[k])+'"></div>'}).join("");
+$("cmodo").value=cfg.modo;$("curl").value=cfg.url;$("ctok").value=tok();
+$("bCfg").onclick=function(){document.querySelectorAll("[data-m]").forEach(function(e){cfg.m[e.dataset.m]=e.value.trim()});cfg.modo=$("cmodo").value;cfg.url=$("curl").value.trim();sessionStorage.setItem("tok",$("ctok").value);LS.s("cfg",cfg);upd();msg("Configurações salvas.")};
+$("bConn").onclick=function(){$("bCfg").onclick();if(cfg.modo=="email"){fetch(cfg.url+"?acao=ping&token="+encodeURIComponent(tok())).then(function(r){return r.json()}).then(function(j){msg(j.ok?"Conexão OK. Cota de e-mails hoje: "+j.cota:"Falha: "+(j.erro||""))},function(e){msg("Falha: "+e.message)});return}list().then(function(a){msg("Conexão OK: "+a.length+" registro(s).")},function(e){msg("Falha: "+e.message)})};
+$("bWipe").onclick=function(){if(confirm("Apagar receitas e modelos salvos NESTE navegador?")){localStorage.removeItem("recs");localStorage.removeItem("tmpls");renderMod();msg("Dados locais apagados.")}};
+buildEd();renderMod();
+</script>
+</body>
+</html>
